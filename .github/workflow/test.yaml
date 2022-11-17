@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [ release ]
+  pull_request:
+    branches: [ release ]
+
+env:
+  PGYER_API_KEY: 9b8a407f285532d6759289xxxxxxxxxx
+  APK_FILE_PATH: android/app/build/outputs/apk/release
+  APK_FILE_NAME: app-release.apk
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Get yarn cache
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - name: Cache dependencies
+        uses: actions/cache@v1.2.0
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install yarn dependencies
+        run: |
+          echo Node.js runtime version: $(node -v)
+          yarn config set registry https://registry.npm.taobao.org
+          yarn
+
+      - name: Run unit test
+        run: yarn test
+
+      - name: Build release apk
+        run: |
+          cd android
+          echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+          bash gradlew assembleRelease
+
+      - name: Upload apk to artifact
+        uses: actions/upload-artifact@v1
+        with:
+          name: ${{env.APK_FILE_NAME}}
+          path: ${{env.APK_FILE_PATH}}
+
+      #- name: Upload apk to Pgyer
+      #  run: |
+      #    curl -F 'file=@${{env.APK_FILE_PATH}}/${{env.APK_FILE_NAME}}' -F '_api_key=${{env.PGYER_API_KEY}}' https://www.pgyer.com/apiv2/app/upload
