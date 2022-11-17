@@ -41,3 +41,9 @@ allprojects {
     }
 }
 
+android {
+    compileSdkVersion 26
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+    }
