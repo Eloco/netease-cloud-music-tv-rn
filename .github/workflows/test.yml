@@ -5,6 +5,7 @@ on:
     branches: [ release ]
   pull_request:
     branches: [ release ]
+  workflow_dispatch:
 
 env:
   PGYER_API_KEY: 9b8a407f285532d6759289xxxxxxxxxx
